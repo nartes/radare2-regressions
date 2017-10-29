@@ -4,7 +4,7 @@ CFLAGS += $(shell pkg-config --cflags r_core) -g
 
 all: $(OBJECTS)
 
-$(OBJECTS):%:%.c
+% : %.c
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
 run:
@@ -13,4 +13,4 @@ run:
 clean:
 	rm -f $(OBJECTS)
 
-.PHONY: all $(OBJECTS)
+.PHONY: all

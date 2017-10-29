@@ -407,7 +407,7 @@ test_reset() {
   REVERSERC=
   ESSENTIAL=
   SKIP=
-  DEBUG=
+  # DEBUG=
 }
 
 test_reset
