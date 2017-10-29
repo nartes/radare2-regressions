@@ -522,6 +522,14 @@ print_fixed() {
   fi
 }
 
+print_total_and_br() {
+  if [ -n "${NOCOLOR}" ]; then
+    printf "%b" "${NL}[${*}]\n"
+  else
+    printf "%b" "${NL}\033[35m[${*}]\033[0m\n"
+  fi
+}
+
 print_label() {
   if [ -n "${NOCOLOR}" ]; then
     printf "%s\n" $@
@@ -550,46 +558,46 @@ print_report() {
   echo
   echo "=== Report ==="
   echo
-  printf "    SUCCESS"
+  printf "      SUCCESS"
   if [ "${TESTS_SUCCESS}" -gt 0 ]; then
     print_success "${TESTS_SUCCESS}"
   else
     print_failed "${TESTS_SUCCESS}"
   fi
-  printf "    FIXED"
+  printf "      FIXED"
   if [ "${TESTS_FIXED}" -gt 0 ]; then
     print_fixed   "${TESTS_FIXED}"
   else
     print_fixed   0
   fi
-  printf "    BROKEN"
+  printf "      BROKEN"
   if [ "${TESTS_BROKEN}" -gt 0 ]; then
     print_broken "${TESTS_BROKEN}"
   else
     print_broken 0
   fi
-  printf "    FATAL"
+  printf "      FATAL"
   if [ "${TESTS_FATAL}" -gt 0 ]; then
     print_failed "${TESTS_FATAL}"
   else
     print_failed 0
   fi
-  printf "    FAILED"
+  printf "      FAILED"
   if [ "${TESTS_FAILED}" -gt 0 ]; then
     print_failed  "${TESTS_FAILED}"
   else
     print_failed  0
   fi
-  printf "    TOTAL${NL}"
-  print_label "[${TESTS_TOTAL}]"
+  printf "      TOTAL"
+  print_total_and_br "${TESTS_TOTAL}"
 
   if [ "${TESTS_TOTAL}" != 0 ]; then
     dc -V > /dev/null 2>&1
     if [ $? = 0 ]; then
       BADBOYS=$((${TESTS_BROKEN}+${TESTS_FAILED}+${TESTS_FATAL}))
       BN=`echo "100 ${BADBOYS} * ${TESTS_TOTAL} / n" | dc`
-      printf "    BROKENNESS${NL}"
-      print_label "[${BN}%]"
+      printf "      BROKENNESS"
+      print_total_and_br "${BN}%"
       echo
     else
       echo " TOTAL"
