@@ -6,8 +6,9 @@
 bool test_r_sort1_asc (void) {
 	int n = 10;
 	RBinXS1 *b = R_NEWS (RBinXS1, 2 * n);
+	int i;
 
-	for (int i = 0; i < n; ++i) {
+	for (i = 0; i < n; ++i) {
 		b[2 * i].off = rand () % 100;
 		b[2 * i].start = true;
 		b[2 * i].s_id = i;
@@ -19,7 +20,7 @@ bool test_r_sort1_asc (void) {
 
 	r_bin_x_sort1_asc (b, b + 2 * n, sizeof (RBinXS1), (RBinXComp)r_bin_x_cmp2);
 
-	for (int i = 1; i < 2 * n; ++i) {
+	for (i = 1; i < 2 * n; ++i) {
 		mu_assert_eq (true, r_bin_x_cmp2 (&b[i - 1], &b[i]) < 0, "ascending sorting");
 	}
 
@@ -109,6 +110,9 @@ bool test_r_f2 (void) {
 		-1};
 
 	int n = 0;
+	int i, m, k, j;
+
+
 	while (a[n] >= 0)
 		++n;
 
@@ -118,7 +122,7 @@ bool test_r_f2 (void) {
 
 	RBinXS1 *b = R_NEWS (RBinXS1, 2 * n);
 
-	for (int i = 0; i < n; ++i) {
+	for (i = 0; i < n; ++i) {
 		b[2 * i].off = a[2 * i];
 		b[2 * i].start = true;
 		b[2 * i].s_id = i;
@@ -130,15 +134,12 @@ bool test_r_f2 (void) {
 
 	r_bin_x_sort1_asc (b, b + 2 * n, sizeof (RBinXS1), (RBinXComp)r_bin_x_cmp2);
 
-	int m;
 	RBinXS3 *c = NULL;
 	r_bin_x_f2 (b, n, &c, &m);
 
-	int k, j;
 	for (j = 0, k = 0; z[j] != -1; ++k, ++j) {
 		++j;
 
-		int i;
 		for (i = 0; z[j] != -1 && i < c[k].l; ++i, ++j) {
 			mu_assert_eq (z[j], c[k].s[i] + 1, "same sections per segment");
 		}
@@ -149,7 +150,7 @@ bool test_r_f2 (void) {
 	mu_assert_eq (m, k, "equal segment events");
 
 	R_FREE (b);
-	for (int k = 0; k < m; ++k) {
+	for (k = 0; k < m; ++k) {
 		R_FREE (c[k].s);
 	}
 	R_FREE (c);
