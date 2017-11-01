@@ -177,6 +177,8 @@ bool test_r_f2 (void) {
 
 	e[0].d = d;
 	e[0].u = u;
+	e[0].sections = NULL;
+	e[0].lru = -1;
 
 	for (j = 0; y[j] != -1; ++j) {
 		r_bin_x_f6_bt (e, y[j], 0);
