@@ -80,6 +80,15 @@ bool test_r_sort1_asc (void) {
 // 5 .. 10 #1, #4, #7, #11, #14
 // ...
 //
+// Queries:
+//
+// 1, 1
+// 2, 1, 18
+// 29 2, 4, 7, 11, 14
+// 9 1, 4, 7, 11, 14
+// 89 3, 6, 10, 13, 17
+// 99 6, 13
+//
 //                 i      w x
 // Merge 1 18 with 7, 14, 18
 
@@ -109,9 +118,20 @@ bool test_r_f2 (void) {
 		100, -1,
 		-1};
 
-	int n = 0;
-	int i, m, k, j;
+	int y[] = {
+		1, 1, -1,
+		2, 1, 18, -1,
+		29, 2, 4, 7, 11, 14, -1,
+		9, 1, 4, 7, 11, 14, -1,
+		89, 3, 6, 10, 13, 17, -1,
+		99, 6, 13, -1,
+		-1};
 
+	int n = 0;
+	int i, m, k, j, u;
+	RBinXS1 *b = NULL;
+	RBinXS3 *c = NULL;
+	RBinXS4 *d = NULL;
 
 	while (a[n] >= 0)
 		++n;
@@ -120,7 +140,7 @@ bool test_r_f2 (void) {
 
 	n /= 2;
 
-	RBinXS1 *b = R_NEWS (RBinXS1, 2 * n);
+	b = R_NEWS (RBinXS1, 2 * n);
 
 	for (i = 0; i < n; ++i) {
 		b[2 * i].off = a[2 * i];
@@ -134,14 +154,15 @@ bool test_r_f2 (void) {
 
 	r_bin_x_sort1_asc (b, b + 2 * n, sizeof (RBinXS1), (RBinXComp)r_bin_x_cmp2);
 
-	RBinXS3 *c = NULL;
+	c = NULL;
 	r_bin_x_f2 (b, n, &c, &m);
 
 	for (j = 0, k = 0; z[j] != -1; ++k, ++j) {
+		mu_assert_eq (z[j], c[k].off, "same event offset");
 		++j;
 
 		for (i = 0; z[j] != -1 && i < c[k].l; ++i, ++j) {
-			mu_assert_eq (z[j], c[k].s[i] + 1, "same sections per segment");
+			mu_assert_eq (z[j], c[k].s[i] + 1, "same sections per event");
 		}
 
 		mu_assert_eq (true, i == c[k].l && z[j] == -1, "same num of sections");
@@ -149,11 +170,51 @@ bool test_r_f2 (void) {
 
 	mu_assert_eq (m, k, "equal segment events");
 
+	d = NULL;
+	u = r_bin_x_f3 (c, m, &d);
+
+	RBinXS5 e[1];
+
+	e[0].d = d;
+	e[0].u = u;
+
+	for (j = 0; y[j] != -1; ++j) {
+		r_bin_x_f6_bt (e, y[j], 0);
+
+		d = r_bin_x_f8_get_all (e, 0);
+
+		if (y[j] == -1) {
+			continue;
+		}
+
+
+		mu_assert_eq (true,
+			      d != NULL,
+			      "sections are present");
+
+		mu_assert_eq (true,
+			      d->from <= y[j] && y[j] < d->to,
+			      "section lies within a segment");
+
+		++j;
+
+		for (i = 0; y[j] != -1 && i < d->l; ++i, ++j) {
+			mu_assert_eq (y[j], d->s[i] + 1, "same sections per segment");
+		}
+
+		mu_assert_eq (true, i == d->l && y[j] == -1, "same num of sections");
+	}
+
 	R_FREE (b);
 	for (k = 0; k < m; ++k) {
 		R_FREE (c[k].s);
 	}
 	R_FREE (c);
+
+	for (k = 0; k < u; ++k) {
+		R_FREE (e[0].d[k].s);
+	}
+	R_FREE (e[0].d);
 
 	mu_end;
 }
