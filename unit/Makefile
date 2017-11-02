@@ -1,16 +1,20 @@
-OBJECTS = $(patsubst %.c,%,$(wildcard *.c))
-LDFLAGS += $(shell pkg-config --libs r_core)
-CFLAGS += $(shell pkg-config --cflags r_core) -g
+TESTS = $(patsubst %.c,%,$(wildcard *.c))
+OBJECTS = $(patsubst %.c,%.o,$(wildcard *.c))
+LDFLAGS += $(shell pkg-config --libs r_core) -lm
+CFLAGS += $(shell pkg-config --cflags r_core) -g -DUNIT_TEST
 
-all: $(OBJECTS)
+all: $(OBJECTS) $(TESTS)
 
-% : %.c
-	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+%.o : %.c
+	$(CC) $(CFLAGS) $< -c -o $@
+
+% : %.o
+	$(CC) $(LDFLAGS) $< -o $@
 
 run:
-	r=0 ; for a in $(OBJECTS) ; do ./$$a || r=1; done ; exit $r
+	r=0 ; for a in $(TESTS) ; do ./$$a || r=1; done ; exit $r
 
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(TESTS) $(OBJECTS)
 
 .PHONY: all

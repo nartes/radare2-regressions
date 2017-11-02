@@ -2,6 +2,7 @@
 #include <experimental/x_m1.h>
 #include <experimental/x_m1_private.h>
 #include <stdlib.h>
+#include <math.h>
 
 bool test_r_sort1_asc (void) {
 	int n = 10;
@@ -82,12 +83,16 @@ bool test_r_sort1_asc (void) {
 //
 // Queries:
 //
+// #1 random, to check the result
 // 1, 1
 // 2, 1, 18
 // 29 2, 4, 7, 11, 14
 // 9 1, 4, 7, 11, 14
 // 89 3, 6, 10, 13, 17
 // 99 6, 13
+//
+// #2 sequential to benchmark the access speed (O(1) is expected)
+// 1 1 2 3 5 10 10 10 20 20 30 41 42 43 50 60 60 60 60 65 60 50 43 42 41 -1
 //
 //                 i      w x
 // Merge 1 18 with 7, 14, 18
@@ -126,6 +131,10 @@ bool test_r_f2 (void) {
 		89, 3, 6, 10, 13, 17, -1,
 		99, 6, 13, -1,
 		-1};
+
+	int w[] = {
+		1, 1, 2, 3, 5, 10, 10, 10, 20, 20, 30, 41,
+		42, 43, 50, 60, 60, 60, 60, 65, 60, 50, 43, 42, 41, -1};
 
 	int n = 0;
 	int i, m, k, j, u;
@@ -205,6 +214,27 @@ bool test_r_f2 (void) {
 		}
 
 		mu_assert_eq (true, i == d->l && y[j] == -1, "same num of sections");
+	}
+
+	e[0].sections = NULL;
+	e[0].lru = -1;
+
+	for (j = 0; w[j] != -1; ++j) {
+		r_bin_x_f6_bt (e, w[j], 0);
+
+		d = r_bin_x_f8_get_all (e, 0);
+
+		mu_assert_eq (true,
+			      d != NULL && d->l > 0,
+			      "sections are present");
+
+		mu_assert_eq (true,
+			      r_bin_x_cmp3_count <=
+				      (j == 0 ?
+					       (int)(ceil (log (e[0].u) / log(2.0))) :
+					       3),
+			      "random requires O(logn),"
+			      " monotonous in turn takes O(1)");
 	}
 
 	R_FREE (b);
