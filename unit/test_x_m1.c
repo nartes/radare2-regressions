@@ -190,7 +190,7 @@ bool test_r_f2 (void) {
 		b[2 * i + 1].s_id = i;
 	}
 
-	r_bin_x_sort1_asc (b, b + 2 * n, sizeof (RBinXS1), (RBinXComp)r_bin_x_cmp2);
+	qsort (b, 2 * n, sizeof (RBinXS1), (RBinXComp)r_bin_x_cmp2);
 
 	c = NULL;
 	r_bin_x_f2 (b, n, &c, &m);
