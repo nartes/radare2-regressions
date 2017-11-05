@@ -44,10 +44,24 @@ bool test_r_sort1_asc (void) {
 //  #18
 //  2..3
 //
+//        For now, such sections are incorrect,
+//        i.e. a[i].from = a[i].to = -1
+//        (a[i].from > a[i].to means something is wrong)
+//        #19
+//                                                              <-----size----->
+//        0x40..................................................(UT64_MAX - 0xfa + 0x40)
+//        <----------------------------UT64_MAX - 0xfa---------->
+//        a[i].from = a[i].to + a[i].size = 0x40 + UT64_MAX - 0xfa = 0x40 - 0xfa < 0x40
+//        a[i].from < a[i].to -> a[i].from = a[i].to = -1
+//
+//                                                           #20
+//                                                           210...220
+//
+//
 // [1,#1 [2,#18 [3,#7 [3,#14 ]3,#18 [5,#4 [5,#11, ]10,#1 [20,#2 ]30,#14 ]30,#11 ]30,#7 ]30,#4
 // [41,#5 [41,#8 [41,#12 [41,#15 ]42,#15 ]42,#8 [43,#9 [43,#16 ]50,#2 [60,#3
 // ]65,#16 ]65,#12 ]65,#9 ]65,#5 [66,#6 [66,#13 [67,#10 [67,#17 ]90,#3
-// ]99,#17 ]99,#10 ]100,#13 ]100,#6
+// ]99,#17 ]99,#10 ]100,#13 ]100,#6 [210,#20, ]220,#20 [-0x1,#19 ]-0x1,#19
 //
 // 1 1,
 // 2 1, 18,
@@ -62,11 +76,14 @@ bool test_r_sort1_asc (void) {
 // 50 5, 9, 12, 16,
 // 60 3, 5, 9, 12, 16,
 // 65 3,
-// 66 3, 6, 13
+// 66 3, 6, 13,
 // 67 3, 6, 10, 13, 17,
-// 90 6, 10, 13, 17
-// 99 6, 13
+// 90 6, 10, 13, 17,
+// 99 6, 13,
 // 100
+// 210 20,
+// 220
+// -0x1
 //
 // push 1
 // 1 .. 2 #1
@@ -90,6 +107,8 @@ bool test_r_sort1_asc (void) {
 // 9 1, 4, 7, 11, 14
 // 89 3, 6, 10, 13, 17
 // 99 6, 13
+// 205 , #empty query in between some sections
+// 234 , #empty query beoynd any sections
 //
 // #2 sequential to benchmark the access speed (O(1) is expected)
 // 1 1 2 3 5 10 10 10 20 20 30 41 42 43 50 60 60 60 60 65 60 50 43 42 41 -1
@@ -100,7 +119,8 @@ bool test_r_sort1_asc (void) {
 bool test_r_f2 (void) {
 	int a[] = {1, 10, 20, 50, 60, 90, 5, 30, 41, 65, 66, 100,
 		   3, 30, 41, 42, 43, 65, 67, 99, 5, 30, 41, 65,
-		   66, 100, 3, 30, 41, 42, 43, 65, 67, 99, 2, 3, -1};
+		   66, 100, 3, 30, 41, 42, 43, 65, 67, 99, 2, 3,
+		   0x40, R_MAX((int)((ut64)UT64_MAX - 0xfa + 0x40), 0), 210, 220, -1};
 
 	int z[] = {
 		1, 1, -1,
@@ -121,6 +141,9 @@ bool test_r_f2 (void) {
 		90, 6, 10, 13, 17, -1,
 		99, 6, 13, -1,
 		100, -1,
+		210, 20, -1,
+		220, -1,
+		ST32_MAX, -1,
 		-1};
 
 	int y[] = {
@@ -130,6 +153,8 @@ bool test_r_f2 (void) {
 		9, 1, 4, 7, 11, 14, -1,
 		89, 3, 6, 10, 13, 17, -1,
 		99, 6, 13, -1,
+		205, -1,
+		235, -1,
 		-1};
 
 	int w[] = {
@@ -152,6 +177,10 @@ bool test_r_f2 (void) {
 	b = R_NEWS (RBinXS1, 2 * n);
 
 	for (i = 0; i < n; ++i) {
+		if (a[2 * i] > a[2 * i + 1]) {
+			a[2 * i] = a[2 * i + 1] = -1;
+		}
+
 		b[2 * i].off = a[2 * i];
 		b[2 * i].start = true;
 		b[2 * i].s_id = i;
@@ -167,7 +196,9 @@ bool test_r_f2 (void) {
 	r_bin_x_f2 (b, n, &c, &m);
 
 	for (j = 0, k = 0; z[j] != -1; ++k, ++j) {
-		mu_assert_eq (z[j], c[k].off, "same event offset");
+		mu_assert_eq (z[j] == ST32_MAX ? (ut64)(UT64_MAX) : z[j],
+			      c[k].off,
+			      "same event offset");
 		++j;
 
 		for (i = 0; z[j] != -1 && i < c[k].l; ++i, ++j) {
@@ -199,13 +230,15 @@ bool test_r_f2 (void) {
 		}
 
 
-		mu_assert_eq (true,
-			      d != NULL,
-			      "sections are present");
+		if (y[j + 1] != -1) {
+			mu_assert_eq (true,
+				      d != NULL,
+				      "sections are present");
 
-		mu_assert_eq (true,
-			      d->from <= y[j] && y[j] < d->to,
-			      "section lies within a segment");
+			mu_assert_eq (true,
+				      d->from <= y[j] && y[j] < d->to,
+				      "section lies within a segment");
+		}
 
 		++j;
 
@@ -213,7 +246,9 @@ bool test_r_f2 (void) {
 			mu_assert_eq (y[j], d->s[i] + 1, "same sections per segment");
 		}
 
-		mu_assert_eq (true, i == d->l && y[j] == -1, "same num of sections");
+		if (d) {
+			mu_assert_eq (true, i == d->l && y[j] == -1, "same num of sections");
+		}
 	}
 
 	e[0].sections = NULL;
